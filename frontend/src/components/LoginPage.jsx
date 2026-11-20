@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSound } from '../context/SoundContext';
+import PasswordInputWithStrength, { checkPasswordStrength } from './PasswordInputWithStrength';
+import OtpVerificationPage from './OtpVerificationPage';
 import { Lock, Mail, User, ShieldCheck, Waves, BookOpen, Volume2, VolumeX, Music, Sparkles } from 'lucide-react';
 
 const AVATAR_OPTIONS = [
@@ -15,7 +17,7 @@ const AVATAR_OPTIONS = [
 ];
 
 export default function LoginPage({ onOpenArchitecture }) {
-  const { login, register } = useAuth();
+  const { login, register, challengeToken } = useAuth();
   const { soundEnabled, toggleSound, musicEnabled, toggleMusic, playBubblePop, playCorrect, playWrong } = useSound();
 
   const [mode, setMode] = useState('login'); // 'login' or 'register'
@@ -25,6 +27,16 @@ export default function LoginPage({ onOpenArchitecture }) {
   const [selectedAvatar, setSelectedAvatar] = useState('clownfish');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (challengeToken) {
+    return (
+      <OtpVerificationPage
+        isStandalone={true}
+        onSuccess={() => {}}
+        onCancel={() => setErrorMsg('')}
+      />
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,6 +53,13 @@ export default function LoginPage({ onOpenArchitecture }) {
           setErrorMsg(res.message || 'Login failed. Check your credentials.');
         }
       } else {
+        const strength = checkPasswordStrength(password);
+        if (!strength.isStrong) {
+          playWrong();
+          setErrorMsg('Please choose a strong password meeting all 5 security criteria before registering.');
+          setLoading(false);
+          return;
+        }
         const res = await register(username, email, password, selectedAvatar);
         if (res.success) {
           playCorrect();
@@ -198,19 +217,14 @@ export default function LoginPage({ onOpenArchitecture }) {
               </div>
             )}
 
-            <div className="form-group">
-              <label>Password</label>
-              <div className="input-with-icon">
-                <Lock size={18} className="field-icon" />
-                <input
-                  type="password"
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+            <PasswordInputWithStrength
+              value={password}
+              onChange={setPassword}
+              isRegister={mode === 'register'}
+              placeholder="Enter your password"
+              required
+              onGeneratedSound={playBubblePop}
+            />
 
             {mode === 'register' && (
               <div className="form-group">

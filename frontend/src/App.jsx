@@ -14,6 +14,7 @@ import LevelSelectionScreen from './components/LevelSelectionScreen';
 import LevelPlayScreen from './components/LevelPlayScreen';
 import LevelCompleteModal from './components/LevelCompleteModal';
 import LandingPage from './components/LandingPage';
+import OtpVerificationPage from './components/OtpVerificationPage';
 import { RefreshCw, Grid, Gamepad2, Waves } from 'lucide-react';
 import './App.css';
 
@@ -27,7 +28,7 @@ const SCREEN = {
 };
 
 function MainApp() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, challengeToken } = useAuth();
 
   // Screen state: start at Level Selection
   const [screen, setScreen] = useState(SCREEN.LEVEL_SELECT);
@@ -104,8 +105,18 @@ function MainApp() {
     );
   }
 
-  // ── Authentication Gate (Landing Page with Video) ─────────────
+  // ── Authentication Gate (Landing Page or OTP Verification Page) ─────────────
   if (!isAuthenticated) {
+    if (challengeToken) {
+      return (
+        <OtpVerificationPage
+          isStandalone={true}
+          onSuccess={handleGoToLevelSelect}
+          onCancel={() => {}}
+        />
+      );
+    }
+
     return (
       <>
         <LandingPage

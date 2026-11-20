@@ -1,10 +1,11 @@
+
 const { ObjectId } = require('mongodb');
-const bcrypt = require('bcryptjs');
 const gameEvents = require('../services/eventService');
+const { hashPassword, verifyPassword } = require('../services/passwordService');
 
 /**
- * User Model - Manages Virtual Identity & Authentication data
- * Cohesion: High cohesion focusing strictly on user persistence and credential validation.
+ * User Model - Manages Virtual Identity & Authentication
+ * Includes Email OTP Two-Factor Authentication (2FA).
  */
 class UserModel {
   constructor(db) {
@@ -14,38 +15,71 @@ class UserModel {
   // Ensure unique indexes on username and email
   async initIndexes() {
     try {
-      await this.collection.createIndex({ username: 1 }, { unique: true });
-      await this.collection.createIndex({ email: 1 }, { unique: true });
+      await this.collection.createIndex(
+        { username: 1 },
+        { unique: true }
+      );
+
+      await this.collection.createIndex(
+        { email: 1 },
+        { unique: true }
+      );
     } catch (err) {
       console.warn('User indexes notice:', err.message);
     }
   }
 
+  // Find user by username (case-insensitive)
   async findByUsername(username) {
-    return await this.collection.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    return await this.collection.findOne({
+      username: {
+        $regex: new RegExp(
+          `^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+          'i'
+        )
+      }
+    });
   }
 
+  // Find user by email
   async findByEmail(email) {
-    return await this.collection.findOne({ email: email.toLowerCase() });
+    return await this.collection.findOne({
+      email: email.trim().toLowerCase()
+    });
   }
 
+  // Find user by ID (exclude password and OTP)
   async findById(id) {
     try {
-      return await this.collection.findOne({ _id: new ObjectId(id) }, { projection: { password: 0 } });
+      return await this.collection.findOne(
+        { _id: new ObjectId(id) },
+        {
+          projection: {
+            password: 0,
+            loginOTP: 0
+          }
+        }
+      );
     } catch (err) {
       return null;
     }
   }
 
-  async create({ username, email, password, avatar = 'clownfish' }) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+  // Create new user
+  async create({
+    username,
+    email,
+    password,
+    avatar = 'clownfish'
+  }) {
+    const hashedPassword = await hashPassword(password);
 
     const newUser = {
       username: username.trim(),
       email: email.trim().toLowerCase(),
       password: hashedPassword,
       avatar,
+
       stats: {
         totalGames: 0,
         highScore: 0,
@@ -53,11 +87,13 @@ class UserModel {
         highestRound: 0,
         badges: ['Novice Angler']
       },
+
       createdAt: new Date(),
       lastLogin: new Date()
     };
 
     const result = await this.collection.insertOne(newUser);
+
     return {
       _id: result.insertedId,
       username: newUser.username,
@@ -68,12 +104,82 @@ class UserModel {
     };
   }
 
+  // Verify password
   async verifyPassword(plainPassword, hashedPassword) {
-    return await bcrypt.compare(plainPassword, hashedPassword);
+    return await verifyPassword(plainPassword, hashedPassword);
   }
 
-  async updateStats(userId, { score, roundReached }) {
-    const user = await this.collection.findOne({ _id: new ObjectId(userId) });
+  // ==========================================
+  // EMAIL OTP TWO-FACTOR AUTHENTICATION (2FA)
+  // ==========================================
+
+  // Save hashed OTP
+  async saveLoginOTP(userId, hashedOTP, expiresAt) {
+    return await this.collection.updateOne(
+      { _id: new ObjectId(userId) },
+      {
+        $set: {
+          loginOTP: {
+            code: hashedOTP,
+            expiresAt: expiresAt,
+            attempts: 0
+          }
+        }
+      }
+    );
+  }
+
+  // Retrieve OTP details
+  async getLoginOTP(userId) {
+    return await this.collection.findOne(
+      { _id: new ObjectId(userId) },
+      {
+        projection: {
+          loginOTP: 1
+        }
+      }
+    );
+  }
+
+  // Increment incorrect OTP attempts
+  async incrementLoginOTPAttempts(userId) {
+    return await this.collection.updateOne(
+      {
+        _id: new ObjectId(userId),
+        'loginOTP': { $exists: true }
+      },
+      {
+        $inc: {
+          'loginOTP.attempts': 1
+        }
+      }
+    );
+  }
+
+  // Clear OTP after successful verification
+  async clearLoginOTP(userId) {
+    return await this.collection.updateOne(
+      { _id: new ObjectId(userId) },
+      {
+        $unset: {
+          loginOTP: ''
+        }
+      }
+    );
+  }
+
+  // ==========================================
+  // GAME STATISTICS
+  // ==========================================
+
+  async updateStats(userId, {
+    score,
+    roundReached
+  }) {
+    const user = await this.collection.findOne({
+      _id: new ObjectId(userId)
+    });
+
     if (!user) return null;
 
     const currentStats = user.stats || {
@@ -84,13 +190,27 @@ class UserModel {
       badges: ['Novice Angler']
     };
 
-    const newHighScore = Math.max(currentStats.highScore || 0, Number(score) || 0);
-    const newHighestRound = Math.max(currentStats.highestRound || 0, Number(roundReached) || 0);
-    const newTotalScore = (currentStats.totalScore || 0) + (Number(score) || 0);
-    const newTotalGames = (currentStats.totalGames || 0) + 1;
+    const newHighScore = Math.max(
+      currentStats.highScore || 0,
+      Number(score) || 0
+    );
 
-    // Badges system
-    const oldBadges = new Set(currentStats.badges || ['Novice Angler']);
+    const newHighestRound = Math.max(
+      currentStats.highestRound || 0,
+      Number(roundReached) || 0
+    );
+
+    const newTotalScore =
+      (currentStats.totalScore || 0) + (Number(score) || 0);
+
+    const newTotalGames =
+      (currentStats.totalGames || 0) + 1;
+
+    // Badge system
+    const oldBadges = new Set(
+      currentStats.badges || ['Novice Angler']
+    );
+
     const badges = new Set(oldBadges);
 
     if (newHighScore >= 300) badges.add('Reef Explorer');
@@ -100,7 +220,7 @@ class UserModel {
     if (newHighestRound >= 10) badges.add('Fish Whisperer');
     if (newTotalGames >= 10) badges.add('Aquatic Veteran');
 
-    // Trigger in-process badge:unlocked event for any newly acquired badges
+    // Emit badge unlock events
     for (const badge of badges) {
       if (!oldBadges.has(badge)) {
         gameEvents.emit('badge:unlocked', {
@@ -121,17 +241,29 @@ class UserModel {
 
     await this.collection.updateOne(
       { _id: new ObjectId(userId) },
-      { $set: { stats: updatedStats, lastPlayed: new Date() } }
+      {
+        $set: {
+          stats: updatedStats,
+          lastPlayed: new Date()
+        }
+      }
     );
 
     return updatedStats;
   }
 
+  // ==========================================
+  // AVATAR MANAGEMENT
+  // ==========================================
+
   async updateAvatar(userId, avatar) {
     await this.collection.updateOne(
       { _id: new ObjectId(userId) },
-      { $set: { avatar } }
+      {
+        $set: { avatar }
+      }
     );
+
     return avatar;
   }
 }

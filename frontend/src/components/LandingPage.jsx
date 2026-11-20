@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSound } from '../context/SoundContext';
+import PasswordInputWithStrength, { checkPasswordStrength } from './PasswordInputWithStrength';
 import {
   Waves,
   Play,
@@ -142,12 +143,22 @@ export default function LandingPage({
         const res = await login(username, password);
         if (res.success) {
           playCorrect();
-          if (onStartAdventure) onStartAdventure();
+          // If OTP is required, challengeToken is set in AuthContext and OTP page will display
+          if (!res.otpRequired && onStartAdventure) {
+            onStartAdventure();
+          }
         } else {
           playWrong();
           setErrorMsg(res.message || 'Login failed. Check your credentials.');
         }
       } else {
+        const strength = checkPasswordStrength(password);
+        if (!strength.isStrong) {
+          playWrong();
+          setErrorMsg('Please choose a strong password meeting all 5 security criteria before registering.');
+          setLoading(false);
+          return;
+        }
         const res = await register(username, email, password, selectedAvatar);
         if (res.success) {
           playCorrect();
@@ -572,19 +583,14 @@ export default function LandingPage({
               </div>
             )}
 
-            <div className="form-group">
-              <label>Password</label>
-              <div className="input-with-icon">
-                <Lock size={18} className="field-icon" />
-                <input
-                  type="password"
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+            <PasswordInputWithStrength
+              value={password}
+              onChange={setPassword}
+              isRegister={authMode === 'register'}
+              placeholder="Enter your password"
+              required
+              onGeneratedSound={playBubblePop}
+            />
 
             {authMode === 'register' && (
               <div className="form-group">

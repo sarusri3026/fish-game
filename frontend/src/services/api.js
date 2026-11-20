@@ -1,3 +1,4 @@
+
 /**
  * API Service Client - Centralized HTTP Interoperability Client
  * Theme 1: High Cohesion (Dedicated solely to network communication)
@@ -9,9 +10,11 @@ const API_BASE = '/api';
 const getAuthHeaders = () => {
   const token = localStorage.getItem('fish_quest_token');
   const headers = { 'Content-Type': 'application/json' };
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+
   return headers;
 };
 
@@ -23,6 +26,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+
     return res.json();
   },
 
@@ -32,6 +36,28 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
     });
+
+    return res.json();
+  },
+
+  // Email OTP Verification
+  async verifyOTP(data) {
+    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    return res.json();
+  },
+
+  async resendOTP(data) {
+    const res = await fetch(`${API_BASE}/auth/resend-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
     return res.json();
   },
 
@@ -39,6 +65,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/auth/profile`, {
       headers: getAuthHeaders()
     });
+
     return res.json();
   },
 
@@ -48,6 +75,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ avatar })
     });
+
     return res.json();
   },
 
@@ -57,6 +85,7 @@ export const api = {
       method: 'POST',
       headers: getAuthHeaders()
     });
+
     return res.json();
   },
 
@@ -64,6 +93,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/game/new-round`, {
       headers: getAuthHeaders()
     });
+
     return res.json();
   },
 
@@ -73,6 +103,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ roundId })
     });
+
     return res.json();
   },
 
@@ -82,6 +113,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(verifyPayload)
     });
+
     return res.json();
   },
 
@@ -91,6 +123,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify(scoreData)
     });
+
     return res.json();
   },
 
@@ -103,6 +136,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/game/history`, {
       headers: getAuthHeaders()
     });
+
     return res.json();
   },
 
@@ -116,6 +150,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/levels/progress`, {
       headers: getAuthHeaders()
     });
+
     return res.json();
   },
 
@@ -125,6 +160,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ levelNumber })
     });
+
     return res.json();
   },
 
@@ -134,6 +170,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ levelSessionId, playerAnswer, timeRemaining })
     });
+
     return res.json();
   },
 
@@ -143,6 +180,7 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ bonusKey, stageId, levelNumber })
     });
+
     return res.json();
   }
 };

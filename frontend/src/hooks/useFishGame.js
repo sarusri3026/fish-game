@@ -165,12 +165,7 @@ export function useFishGame() {
     clearAllTimers();
     playWrong();
 
-    const currentLives = livesRef.current;
-    const newLives = Math.max(0, currentLives - 1);
-    livesRef.current = newLives;
-
     if (isMountedRef.current) {
-      setLives(newLives);
       setCombo(0);
       setStats((prev) => ({ ...prev, totalGuesses: prev.totalGuesses + 1 }));
     }
@@ -202,18 +197,14 @@ export function useFishGame() {
       solution: revealedSolution
     });
 
-    if (newLives <= 0) {
-      finishGame(scoreRef.current, roundRef.current);
-    } else {
-      setGameState('ROUND_FEEDBACK');
-      transitionTimeoutRef.current = setTimeout(() => {
-        if (!isMountedRef.current || isGameOverRef.current) return;
-        setRound((r) => r + 1);
-        setFeedback(null);
-        fetchPuzzle();
-      }, 2000);
-    }
-  }, [playWrong, finishGame, fetchPuzzle]);
+    setGameState('ROUND_FEEDBACK');
+    transitionTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current || isGameOverRef.current) return;
+      setRound((r) => r + 1);
+      setFeedback(null);
+      fetchPuzzle();
+    }, 2000);
+  }, [playWrong, fetchPuzzle]);
 
   // Timer Tick Event (Theme 2: Event-Driven Programming)
   useEffect(() => {
@@ -364,15 +355,10 @@ export function useFishGame() {
           fetchPuzzle();
         }, 1500);
       } else {
-        // Wrong answer event
+        // Wrong answer event in Free Play (No life penalty)
         playWrong();
         comboRef.current = 0;
         setCombo(0);
-
-        const currentLives = livesRef.current;
-        const newLives = Math.max(0, currentLives - 1);
-        livesRef.current = newLives;
-        setLives(newLives);
 
         setFeedback({
           type: 'wrong',
@@ -380,17 +366,13 @@ export function useFishGame() {
           solution: res.correctSolution
         });
 
-        if (newLives <= 0) {
-          finishGame(scoreRef.current, roundRef.current);
-        } else {
-          setGameState('ROUND_FEEDBACK');
-          transitionTimeoutRef.current = setTimeout(() => {
-            if (!isMountedRef.current || isGameOverRef.current) return;
-            setRound((r) => r + 1);
-            setFeedback(null);
-            fetchPuzzle();
-          }, 2000);
-        }
+        setGameState('ROUND_FEEDBACK');
+        transitionTimeoutRef.current = setTimeout(() => {
+          if (!isMountedRef.current || isGameOverRef.current) return;
+          setRound((r) => r + 1);
+          setFeedback(null);
+          fetchPuzzle();
+        }, 2000);
       }
     } catch (err) {
       console.error('Answer verification failed:', err);
@@ -433,11 +415,33 @@ export function useFishGame() {
     setTimeLeft((prev) => Math.min(prev + 10, 30));
   };
 
+  // Stop Game: Concludes Free Play session on player command and records final score
+  const stopGame = useCallback(() => {
+    clearAllTimers();
+    isSubmittingRef.current = false;
+    if (gameStateRef.current === 'IDLE' || isGameOverRef.current) {
+      setGameState('IDLE');
+      return;
+    }
+    finishGame(scoreRef.current, roundRef.current);
+  }, [finishGame]);
+
+  // Reset Game: Immediately halts and resets state to IDLE
+  const resetGame = useCallback(() => {
+    clearAllTimers();
+    isSubmittingRef.current = false;
+    isGameOverRef.current = false;
+    setGameState('IDLE');
+    setRound(1);
+    setScore(0);
+    setCombo(0);
+    setFeedback(null);
+  }, []);
+
   return {
     gameState,
     round,
     score,
-    lives,
     combo,
     timeLeft,
     currentPuzzle,
@@ -448,6 +452,8 @@ export function useFishGame() {
     disabledDigits,
     stats,
     startGame,
+    stopGame,
+    resetGame,
     submitAnswer,
     useSonarHint,
     useExtraAir

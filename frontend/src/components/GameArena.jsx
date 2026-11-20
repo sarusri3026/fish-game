@@ -1,14 +1,13 @@
 import React, { useEffect } from 'react';
-import { Heart, Clock, Zap, Sparkles, Wind, RefreshCw, Send, HelpCircle } from 'lucide-react';
+import { StopCircle, Clock, Zap, Sparkles, Wind, RefreshCw, Send, HelpCircle } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
 
-export default function GameArena({ game }) {
+export default function GameArena({ game, onGoToLevels }) {
   const { playBubblePop } = useSound();
   const {
     gameState,
     round,
     score,
-    lives,
     combo,
     timeLeft,
     currentPuzzle,
@@ -18,6 +17,7 @@ export default function GameArena({ game }) {
     hintAvailable,
     disabledDigits,
     startGame,
+    stopGame,
     submitAnswer,
     useSonarHint,
     useExtraAir
@@ -96,10 +96,10 @@ export default function GameArena({ game }) {
               </div>
             </div>
             <div className="feature-item">
-              <span className="feat-emoji">📡</span>
+              <span className="feat-emoji">🛑</span>
               <div>
-                <strong>Sonar & Oxygen Hints</strong>
-                <span>Eliminate wrong answers or add time</span>
+                <strong>Unlimited Free Play</strong>
+                <span>No lives limit — press Stop anytime to bank your score!</span>
               </div>
             </div>
           </div>
@@ -110,24 +110,11 @@ export default function GameArena({ game }) {
         </div>
       ) : (
         <div className="gameplay-container">
-          {/* Top Status Bar: Round, Lives, Timer, Combo, Score */}
+          {/* Top Status Bar: Round, Timer, Streak, Score, Stop Button */}
           <div className="status-bar glassmorphic">
             <div className="status-item">
               <span className="status-label">ROUND</span>
               <span className="status-value round-val">#{round}</span>
-            </div>
-
-            <div className="status-item">
-              <span className="status-label">LIVES</span>
-              <div className="lives-container">
-                {[1, 2, 3].map((heartIndex) => (
-                  <Heart
-                    key={heartIndex}
-                    size={22}
-                    className={`heart-icon ${heartIndex <= lives ? 'heart-full' : 'heart-empty'}`}
-                  />
-                ))}
-              </div>
             </div>
 
             <div className="status-item timer-status">
@@ -156,6 +143,21 @@ export default function GameArena({ game }) {
             <div className="status-item">
               <span className="status-label">SCORE</span>
               <span className="status-value score-val">{score.toLocaleString()}</span>
+            </div>
+
+            <div className="status-item stop-action-item">
+              <button
+                type="button"
+                className="btn-stop-freeplay"
+                onClick={() => {
+                  playBubblePop();
+                  stopGame();
+                }}
+                title="Stop Free Play session & submit score"
+              >
+                <StopCircle size={16} />
+                <span>Stop</span>
+              </button>
             </div>
           </div>
 

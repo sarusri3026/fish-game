@@ -25,8 +25,20 @@ import {
   CheckCircle2,
   Zap,
   HelpCircle,
-  Award
+  Award,
+  LogOut
 } from 'lucide-react';
+
+const AVATAR_MAP = {
+  clownfish: '🐠',
+  shark: '🦈',
+  octopus: '🐙',
+  dolphin: '🐬',
+  turtle: '🐢',
+  pufferfish: '🐡',
+  whale: '🐳',
+  crab: '🦀'
+};
 
 const AVATAR_OPTIONS = [
   { id: 'clownfish', emoji: '🐠', name: 'Clownfish' },
@@ -57,7 +69,7 @@ export default function LandingPage({
   onOpenLeaderboard,
   onStartAdventure
 }) {
-  const { login, register, isAuthenticated } = useAuth();
+  const { login, register, isAuthenticated, user, logout } = useAuth();
   const {
     soundEnabled,
     toggleSound,
@@ -511,141 +523,206 @@ export default function LandingPage({
 
       {/* ── 6. DIVER IDENTITY & SIGN-IN STATION ─────────────────────────── */}
       <section id="auth-station" className="landing-auth-section">
-        <div className="auth-station-card glassmorphic">
-          <div className="auth-station-header">
-            <div className="auth-icon-halo">
-              <ShieldCheck size={32} className="cyan-text" />
-            </div>
-            <h2>{authMode === 'login' ? 'Diver Sign In' : 'Establish Diver Virtual Identity'}</h2>
-            <p className="auth-station-subhead">
-              {authMode === 'login'
-                ? 'Sign in to sync your 100-level road map, claim treasure bonuses, and rank on the global leaderboard.'
-                : 'Choose your aquatic avatar and create a secured diver identity registered in MongoDB Atlas.'}
-            </p>
+        {!isAuthenticated ? (
+          <div className="auth-station-card glassmorphic">
+            <div className="auth-station-header">
+              <div className="auth-icon-halo">
+                <ShieldCheck size={32} className="cyan-text" />
+              </div>
+              <h2>{authMode === 'login' ? 'Diver Sign In' : 'Establish Diver Virtual Identity'}</h2>
+              <p className="auth-station-subhead">
+                {authMode === 'login'
+                  ? 'Sign in to sync your 100-level road map, claim treasure bonuses, and rank on the global leaderboard.'
+                  : 'Choose your aquatic avatar and create a secured diver identity registered in MongoDB Atlas.'}
+              </p>
 
-            {/* Mode Tabs */}
-            <div className="auth-mode-tabs">
-              <button
-                type="button"
-                className={`auth-tab-btn ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => {
-                  playBubblePop();
-                  setAuthMode('login');
-                  setErrorMsg('');
-                }}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                className={`auth-tab-btn ${authMode === 'register' ? 'active' : ''}`}
-                onClick={() => {
-                  playBubblePop();
-                  setAuthMode('register');
-                  setErrorMsg('');
-                }}
-              >
-                Create Account
-              </button>
-            </div>
-          </div>
-
-          {errorMsg && <div className="auth-alert error-alert">{errorMsg}</div>}
-
-          <form onSubmit={handleAuthSubmit} className="landing-auth-form">
-            <div className="form-group">
-              <label>Username</label>
-              <div className="input-with-icon">
-                <User size={18} className="field-icon" />
-                <input
-                  type="text"
-                  placeholder="e.g. CaptainCoral"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+              {/* Mode Tabs */}
+              <div className="auth-mode-tabs">
+                <button
+                  type="button"
+                  className={`auth-tab-btn ${authMode === 'login' ? 'active' : ''}`}
+                  onClick={() => {
+                    playBubblePop();
+                    setAuthMode('login');
+                    setErrorMsg('');
+                  }}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  className={`auth-tab-btn ${authMode === 'register' ? 'active' : ''}`}
+                  onClick={() => {
+                    playBubblePop();
+                    setAuthMode('register');
+                    setErrorMsg('');
+                  }}
+                >
+                  Create Account
+                </button>
               </div>
             </div>
 
-            {authMode === 'register' && (
+            {errorMsg && <div className="auth-alert error-alert">{errorMsg}</div>}
+
+            <form onSubmit={handleAuthSubmit} className="landing-auth-form">
               <div className="form-group">
-                <label>Email Address</label>
+                <label>Username</label>
                 <div className="input-with-icon">
-                  <Mail size={18} className="field-icon" />
+                  <User size={18} className="field-icon" />
                   <input
-                    type="email"
-                    placeholder="diver@ocean.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    type="text"
+                    placeholder="e.g. CaptainCoral"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
               </div>
-            )}
 
-            <PasswordInputWithStrength
-              value={password}
-              onChange={setPassword}
-              isRegister={authMode === 'register'}
-              placeholder="Enter your password"
-              required
-              onGeneratedSound={playBubblePop}
-            />
-
-            {authMode === 'register' && (
-              <div className="form-group">
-                <label>Choose Your Aquatic Avatar</label>
-                <div className="avatar-grid-compact">
-                  {AVATAR_OPTIONS.map((av) => (
-                    <button
-                      key={av.id}
-                      type="button"
-                      className={`avatar-option-btn ${selectedAvatar === av.id ? 'active' : ''}`}
-                      onClick={() => {
-                        playBubblePop();
-                        setSelectedAvatar(av.id);
-                      }}
-                      title={av.name}
-                    >
-                      <span className="av-emoji">{av.emoji}</span>
-                      <span className="av-name">{av.name}</span>
-                    </button>
-                  ))}
+              {authMode === 'register' && (
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <div className="input-with-icon">
+                    <Mail size={18} className="field-icon" />
+                    <input
+                      type="email"
+                      placeholder="diver@ocean.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <button type="submit" className="btn-glow-large submit-btn" disabled={loading}>
-              <Sparkles size={18} />
-              <span>
-                {loading
-                  ? 'Authenticating...'
-                  : authMode === 'login'
-                  ? 'Sign In & Enter Ocean Map'
-                  : 'Register Virtual Identity'}
-              </span>
+              <PasswordInputWithStrength
+                value={password}
+                onChange={setPassword}
+                isRegister={authMode === 'register'}
+                placeholder="Enter your password"
+                required
+                onGeneratedSound={playBubblePop}
+              />
+
+              {authMode === 'register' && (
+                <div className="form-group">
+                  <label>Choose Your Aquatic Avatar</label>
+                  <div className="avatar-grid-compact">
+                    {AVATAR_OPTIONS.map((av) => (
+                      <button
+                        key={av.id}
+                        type="button"
+                        className={`avatar-option-btn ${selectedAvatar === av.id ? 'active' : ''}`}
+                        onClick={() => {
+                          playBubblePop();
+                          setSelectedAvatar(av.id);
+                        }}
+                        title={av.name}
+                      >
+                        <span className="av-emoji">{av.emoji}</span>
+                        <span className="av-name">{av.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="btn-glow-large submit-btn" disabled={loading}>
+                <Sparkles size={18} />
+                <span>
+                  {loading
+                    ? 'Authenticating...'
+                    : authMode === 'login'
+                    ? 'Sign In & Enter Ocean Map'
+                    : 'Register Virtual Identity'}
+                </span>
+              </button>
+            </form>
+
+            {/* Quick Demo Button for Instant Review */}
+            <div className="quick-guest-divider">
+              <span>OR TEST INSTANTLY WITHOUT SIGNING UP</span>
+            </div>
+
+            <button
+              type="button"
+              className="btn-quick-guest-wide"
+              onClick={handleQuickGuest}
+              disabled={loading}
+            >
+              <Zap size={18} className="text-amber" />
+              <span>⚡ Instant Sailor Guest Demo (1-Click Test Dive)</span>
             </button>
-          </form>
 
-          {/* Quick Demo Button for Instant Review */}
-          <div className="quick-guest-divider">
-            <span>OR TEST INSTANTLY WITHOUT SIGNING UP</span>
+            <div className="auth-footer-note">
+              🔒 Theme 4: Access is restricted to authenticated virtual identities (Bcrypt + JWT)
+            </div>
           </div>
+        ) : (
+          <div className="auth-station-card glassmorphic active-session-card">
+            <div className="auth-station-header">
+              <div className="auth-icon-halo active-session-halo">
+                <span className="active-diver-avatar-emoji">
+                  {AVATAR_MAP[user?.avatar] || '🐠'}
+                </span>
+              </div>
+              <div className="active-session-badge">
+                <CheckCircle2 size={14} className="text-emerald" />
+                <span>Virtual Identity Active</span>
+              </div>
+              <h2>Welcome Back, {user?.username || 'Diver'}!</h2>
+              <p className="auth-station-subhead">
+                Your digital persona is securely connected via JSON Web Token (Theme 4). You are ready to explore all 100 coral expedition zones.
+              </p>
+            </div>
 
-          <button
-            type="button"
-            className="btn-quick-guest-wide"
-            onClick={handleQuickGuest}
-            disabled={loading}
-          >
-            <Zap size={18} className="text-amber" />
-            <span>⚡ Instant Sailor Guest Demo (1-Click Test Dive)</span>
-          </button>
+            <div className="active-session-stats-grid">
+              <div className="active-stat-box">
+                <span className="stat-label">High Score</span>
+                <span className="stat-value">{user?.stats?.highScore || 0}</span>
+              </div>
+              <div className="active-stat-box">
+                <span className="stat-label">Total Games</span>
+                <span className="stat-value">{user?.stats?.totalGames || 0}</span>
+              </div>
+              <div className="active-stat-box">
+                <span className="stat-label">Highest Round</span>
+                <span className="stat-value">Round {user?.stats?.highestRound || 1}</span>
+              </div>
+            </div>
 
-          <div className="auth-footer-note">
-            🔒 Theme 4: Access is restricted to authenticated virtual identities (Bcrypt + JWT)
+            <div className="active-session-actions">
+              <button
+                type="button"
+                className="btn-glow-large submit-btn"
+                onClick={() => {
+                  playBubblePop();
+                  if (onStartAdventure) onStartAdventure();
+                }}
+              >
+                <Compass size={18} />
+                <span>Resume 100-Level Road Map</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-logout-landing"
+                onClick={() => {
+                  playBubblePop();
+                  logout();
+                }}
+              >
+                <LogOut size={16} />
+                <span>Sign Out of Identity</span>
+              </button>
+            </div>
+
+            <div className="auth-footer-note">
+              🔒 Authenticated with stateless JWT Bearer Token & MongoDB Atlas persistence
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* ── 7. FOOTER ───────────────────────────────────────────────────── */}

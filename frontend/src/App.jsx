@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SoundProvider } from './context/SoundContext';
 import { useFishGame } from './hooks/useFishGame';
@@ -58,6 +58,10 @@ function MainApp() {
 
   // ── Handlers (Defined before conditional returns to avoid TDZ ReferenceError) ──
   const handleSelectLevel = (levelNum) => {
+    // Ensure Free Play timers and requests are completely stopped before entering Level Play
+    if (game.gameState === 'PLAYING') {
+      game.stopGame();
+    }
     setShowLevelComplete(false);
     setLevelCompleteResult(null);
     setScreen(SCREEN.LEVEL_PLAY);
@@ -65,6 +69,10 @@ function MainApp() {
   };
 
   const handleGoToLevelSelect = () => {
+    // Ensure Free Play timers and requests are completely stopped before entering Level Select
+    if (game.gameState === 'PLAYING') {
+      game.stopGame();
+    }
     setShowLevelComplete(false);
     setLevelCompleteResult(null);
     setScreen(SCREEN.LEVEL_SELECT);
@@ -91,6 +99,21 @@ function MainApp() {
   const handlePlayFreeMode = () => {
     setScreen(SCREEN.FREE_PLAY);
   };
+
+  const handleGoToLanding = () => {
+    // Ensure Free Play timers and requests are completely stopped before going to Landing
+    if (game.gameState === 'PLAYING') {
+      game.stopGame();
+    }
+    setScreen(SCREEN.LANDING);
+  };
+
+  // Ensure Free Play timers and requests are halted when navigating away from Free Play
+  useEffect(() => {
+    if (screen !== SCREEN.FREE_PLAY && game.gameState === 'PLAYING') {
+      game.stopGame();
+    }
+  }, [screen, game]);
 
   // ── Loading state ──────────────────────────────────────────
   if (loading) {
@@ -149,7 +172,7 @@ function MainApp() {
           <div className="nav-screen-switcher">
             <button
               className={`nav-btn nav-btn-outline ${screen === SCREEN.LANDING ? 'active' : ''}`}
-              onClick={() => setScreen(SCREEN.LANDING)}
+              onClick={handleGoToLanding}
               title="Return to Landing Page with Underwater Video"
             >
               <Waves size={16} /> Home / Video
@@ -199,7 +222,10 @@ function MainApp() {
         )}
 
         {screen === SCREEN.FREE_PLAY && (
-          <GameArena game={game} />
+          <GameArena
+            game={game}
+            onGoToLevels={handleGoToLevelSelect}
+          />
         )}
       </main>
 
@@ -238,6 +264,7 @@ function MainApp() {
         stats={game.stats}
         onRestart={game.startGame}
         onViewLeaderboard={() => setLeaderboardModalOpen(true)}
+        onGoToLevels={handleGoToLevelSelect}
       />
 
       {/* Level Complete Modal */}

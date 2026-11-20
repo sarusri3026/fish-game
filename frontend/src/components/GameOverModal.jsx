@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { useSound } from '../context/SoundContext';
-import { Trophy, RotateCcw, Target, Award, ListFilter } from 'lucide-react';
+import { Trophy, RotateCcw, Target, Award, ListFilter, Compass } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export default function GameOverModal({ isOpen, score, round, stats, onRestart, onViewLeaderboard }) {
+export default function GameOverModal({ isOpen, score, round, stats, onRestart, onViewLeaderboard, onGoToLevels }) {
   const { playBubblePop } = useSound();
 
   useEffect(() => {
@@ -63,15 +63,28 @@ export default function GameOverModal({ isOpen, score, round, stats, onRestart, 
         </div>
 
         <div className="gameover-actions">
+          {onGoToLevels && (
+            <button
+              className="btn-glow-large btn-levels-cta"
+              onClick={() => {
+                playBubblePop();
+                onGoToLevels();
+              }}
+            >
+              <Compass size={18} />
+              <span>Play 100-Level Adventure</span>
+            </button>
+          )}
+
           <button
-            className="btn-glow-large"
+            className={onGoToLevels ? 'btn-outline-wide' : 'btn-glow-large'}
             onClick={() => {
               playBubblePop();
               onRestart();
             }}
           >
             <RotateCcw size={18} />
-            <span>Play Again</span>
+            <span>Play Free Mode Again</span>
           </button>
 
           <button
